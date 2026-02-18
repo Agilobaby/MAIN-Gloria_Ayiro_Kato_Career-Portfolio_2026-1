@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gloria Ayiro Kato - Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- PDF.js Library for Secure Rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+      // Configure PDF Worker
+      window.onload = function() {
+        if (window.pdfjsLib) {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+      };
+    </script>
+
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              primary: 'var(--primary-color)',
+              light: {
+                bg: '#f8f7ff',
+                card: '#ffffff'
+              },
+              dark: {
+                bg: '#000000',
+                card: '#111111',
+                text: '#F3F4F6',
+                muted: '#9CA3AF'
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+      }
+      .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      :root {
+        --primary-color: #FFB400;
+      }
+      
+      /* CMS Input Global Styles - High Contrast & No White Boxes */
+      .cms-input {
+        background-color: rgba(255, 180, 0, 0.05) !important;
+        border: 2px dashed rgba(255, 180, 0, 0.3) !important;
+        border-radius: 4px;
+        color: inherit !important;
+        padding: 6px 12px;
+        width: 100%;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        outline: none;
+      }
+      .dark .cms-input {
+        background-color: rgba(255, 255, 255, 0.03) !important;
+        border: 2px dashed rgba(255, 255, 255, 0.1) !important;
+        color: #fff !important;
+      }
+      .cms-input:focus {
+        background-color: rgba(255, 180, 0, 0.15) !important;
+        border-style: solid !important;
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 0 4px rgba(255, 180, 0, 0.1);
+      }
+      input.cms-input, textarea.cms-input {
+        appearance: none;
+        background-image: none !important;
+      }
+
+      /* Hide Video Download Button */
+      video::-webkit-media-controls-enclosure {
+        overflow: hidden;
+      }
+      video::-webkit-media-controls-panel {
+        width: calc(100% + 30px); /* Push download button off screen */
+      }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.10.1",
+    "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
+    "axios": "https://esm.sh/axios@^1.13.2"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-[#f8f7ff] dark:bg-dark-bg transition-colors duration-300">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
