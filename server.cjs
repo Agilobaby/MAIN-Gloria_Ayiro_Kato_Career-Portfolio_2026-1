@@ -1,28 +1,108 @@
 require('dotenv').config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 // --- Configuration ---
 const app = express();
+
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI; // Local MongoDB
 const JWT_SECRET = process.env.JWT_SECRET; // In prod, use process.env
 
 // --- Middleware ---
-app.use(express.json());
-app.use(cors());
+// Security Headers
+app.use(helmet());
+// NoSQL Injection Prevention
+// NoSQL injection prevention — strips $ and . from request body keys
+app.use((req, res, next) => {
+  const sanitize = (obj) => {
+    if (obj && typeof obj === 'object') {
+      Object.keys(obj).forEach(key => {
+        if (key.startsWith('$') || key.includes('.')) {
+          delete obj[key];
+        } else {
+          sanitize(obj[key]);
+        }
+      });
+    }
+  };
+  sanitize(req.body);
+  sanitize(req.query);
+  sanitize(req.params);
+  next();
+});
+// Global Rate Limiter - 100 requests per 15 minutes per IP
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests from this IP. Please try again after 15 minutes.' }
+});
+app.use(globalLimiter);
+// Strict Login Rate Limiter - 5 attempts per 15 minutes per IP
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please wait 15 minutes before trying again.' }
+});
+// Contact Form Rate Limiter - 3 submissions per hour per IP
+const contactLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'You have sent too many messages. Please wait an hour before trying again.' }
+});
+
+app.use(express.json({ limit: '10kb' }));
+app.use(cors({
+  origin: function(origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      process.env.FRONTEND_URL
+    ].filter(Boolean);
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // --- Database Schema ---
 
 // User Schema
 const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  passwordHash: { type: String, required: true },
-  role: { type: String, default: 'admin' }
-});
+  email: {
+    type: String,
+    required: [true, 'Email is required'],
+    unique: true,
+    lowercase: true,
+    trim: true,
+    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address']
+  },
+  passwordHash: {
+    type: String,
+    required: [true, 'Password hash is required']
+  },
+  role: {
+    type: String,
+    enum: ['admin', 'user'],
+    default: 'admin'
+  }
+}, { timestamps: true });
 const User = mongoose.model('User', userSchema);
 
 // Project Schema
@@ -47,27 +127,105 @@ const Experience = mongoose.model('Experience', experienceSchema);
 
 // Message Schema
 const messageSchema = new mongoose.Schema({
-  fullName: String,
-  email: String,
-  subject: String,
-  message: String,
+  fullName: {
+    type: String,
+    required: [true, 'Full name is required'],
+    trim: true,
+    maxlength: [100, 'Name cannot exceed 100 characters']
+  },
+  email: {
+    type: String,
+    required: [true, 'Email is required'],
+    trim: true,
+    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address']
+  },
+  subject: { type: String, trim: true, maxlength: [200, 'Subject cannot exceed 200 characters'] },
+  message: {
+    type: String,
+    required: [true, 'Message is required'],
+    trim: true,
+    maxlength: [2000, 'Message cannot exceed 2000 characters']
+  },
   createdAt: { type: Date, default: Date.now }
 });
 const Message = mongoose.model('Message', messageSchema);
 
+// Security Log Schema
+const securityLogSchema = new mongoose.Schema({
+  action: { type: String, required: true },
+  status: { type: String, required: true },
+  ip: { type: String },
+  userAgent: { type: String },
+  timestamp: { type: Date, default: Date.now }
+});
+const SecurityLog = mongoose.model('SecurityLog', securityLogSchema);
+
+const logSecurityEvent = async (action, status, req) => {
+  try {
+    await SecurityLog.create({
+      action,
+      status,
+      ip: req.ip || 'unknown',
+      userAgent: req.get('user-agent') || 'Unknown'
+    });
+  } catch (e) {
+    // Never let logging crash the main app
+  }
+};
+
+// --- Failed Login Lockout ---
+const loginAttempts = new Map();
+
+const checkLockout = (email) => {
+  const attempts = loginAttempts.get(email);
+  if (!attempts) return false;
+  if (attempts.count >= 5) {
+    const timeSince = Date.now() - attempts.lastAttempt;
+    if (timeSince < 15 * 60 * 1000) return true;
+    loginAttempts.delete(email);
+    return false;
+  }
+  return false;
+};
+
+const recordFailedAttempt = (email) => {
+  const attempts = loginAttempts.get(email) || { count: 0, lastAttempt: 0 };
+  attempts.count += 1;
+  attempts.lastAttempt = Date.now();
+  loginAttempts.set(email, attempts);
+};
+
+const clearLoginAttempts = (email) => {
+  loginAttempts.delete(email);
+};
 // --- Routes ---
 
 // 1. Auth Routes
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
   const { email, password } = req.body;
   try {
+    // Check email-based account lockout
+    if (checkLockout(email)) {
+      return res.status(429).json({ error: 'Account temporarily locked. Too many failed attempts. Try again in 15 minutes.' });
+    }
+
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+    if (!user) {
+      recordFailedAttempt(email);
+      await logSecurityEvent('LOGIN_FAILED', 'WARNING', req);
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+    if (!isMatch) {
+      recordFailedAttempt(email);
+      await logSecurityEvent('LOGIN_FAILED', 'WARNING', req);
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
 
-    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+    clearLoginAttempts(email);
+    await logSecurityEvent('LOGIN_SUCCESS', 'SUCCESS', req);
+    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
     res.json({ token, user: { _id: user._id, email: user.email, role: user.role } });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -123,10 +281,31 @@ app.delete('/api/experience/:id', authMiddleware, async (req, res) => {
 });
 
 // 4. Contact Routes
-app.post('/api/contact', async (req, res) => {
-  const msg = new Message(req.body);
-  await msg.save();
-  res.json({ message: 'Message sent' });
+app.post('/api/contact', contactLimiter, async (req, res) => {
+  // Honeypot check — bots fill hidden fields, humans never see them
+  if (req.body.website_url) {
+    return res.json({ message: 'Message sent' }); // Silent rejection
+  }
+
+  // Email injection prevention
+  const emailValue = req.body.email || '';
+  if (emailValue.includes('\n') || emailValue.includes('\r') ||
+      emailValue.includes('%0a') || emailValue.includes('%0d')) {
+    return res.status(400).json({ error: 'Invalid email address' });
+  }
+
+  try {
+    const msg = new Message({
+      fullName: req.body.fullName,
+      email: req.body.email,
+      subject: req.body.subject,
+      message: req.body.message
+    });
+    await msg.save();
+    res.json({ message: 'Message sent' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 app.get('/api/messages', authMiddleware, async (req, res) => {
@@ -142,7 +321,7 @@ const seedData = async () => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(process.env.ADMIN_PASSWORD, salt)
     await User.create({ email: process.env.ADMIN_EMAIL, passwordHash, role: 'admin' });
-    console.log('Admin user created: admin@example.com / password123');
+    console.log('Admin user created: process.env.ADMIN_EMAIL/ process.env.ADMIN_PASSWORD');
   }
 
   // Seed Projects (if empty)

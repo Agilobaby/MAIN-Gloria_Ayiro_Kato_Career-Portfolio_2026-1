@@ -56,6 +56,30 @@ const Admin = () => {
     }
   }, []);
 
+ // Auto-logout after 30 minutes of inactivity
+ useEffect(() => {
+  let inactivityTimer: ReturnType<typeof setTimeout>;
+
+  const resetTimer = () => {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      alert('You have been automatically logged out due to 30 minutes of inactivity.');
+      navigate('/login');
+    }, 30 * 60 * 1000);
+  };
+
+  const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+  activityEvents.forEach(event => window.addEventListener(event, resetTimer));
+  resetTimer();
+
+  return () => {
+    clearTimeout(inactivityTimer);
+    activityEvents.forEach(event => window.removeEventListener(event, resetTimer));
+  };
+}, [navigate]);
+
   // Live Refresh interval logic
   useEffect(() => {
     fetchData();
