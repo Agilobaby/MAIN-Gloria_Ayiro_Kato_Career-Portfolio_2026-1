@@ -1,4 +1,5 @@
-require('dotenv').config();
+require('dotenv').config({ path: '.env', override: false });
+console.log('ENV CHECK:', process.env.ADMIN_EMAIL, process.env.PORT);
 
 const express = require('express');
 const mongoose = require('mongoose');
