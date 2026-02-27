@@ -117,17 +117,39 @@ const Contact = () => {
             
             <div className="flex flex-col gap-4 pt-6">
               {/* EXTERNAL OPTION - Main CTA */}
-              <div className="relative group/btn">
-                <a 
-                  href={getContactFormMailLink(formData)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`w-full inline-flex items-center justify-center gap-3 bg-primary text-black font-extrabold py-4 px-8 rounded-sm uppercase text-xs tracking-[2px] transition-all shadow-[0_10px_20px_-10px_var(--primary-color)] no-underline hover:scale-[1.01] hover:shadow-[0_15px_30px_-10px_var(--primary-color)]`}
-                >
-                  Send via Gmail <ExternalLink size={16} />
-                </a>
-              </div>
-
+<div className="relative group/btn">
+  <button
+    type="button"
+    disabled={status === 'submitting' || !isFormFilled}
+    onClick={async () => {
+      if (!formData.fullName || !formData.email || !formData.message) {
+        alert("Please fill in all required fields.");
+        return;
+      }
+      setStatus('submitting');
+      try {
+        await sendMessage(formData);
+        window.open(getContactFormMailLink(formData), '_blank');
+        setStatus('success');
+        setFormData({ fullName: '', email: '', subject: '', message: '' });
+        setTimeout(() => setStatus('idle'), 6000);
+      } catch (error) {
+        console.error("Gmail send error:", error);
+        // Still open Gmail even if DB save fails
+        window.open(getContactFormMailLink(formData), '_blank');
+        setStatus('error');
+        setTimeout(() => setStatus('idle'), 4000);
+      }
+    }}
+    className="w-full inline-flex items-center justify-center gap-3 bg-primary text-black font-extrabold py-4 px-8 rounded-sm uppercase text-xs tracking-[2px] transition-all shadow-[0_10px_20px_-10px_var(--primary-color)] no-underline hover:scale-[1.01] hover:shadow-[0_15px_30px_-10px_var(--primary-color)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+  >
+    {status === 'submitting' ? (
+      <>Sending... <Loader2 size={16} className="animate-spin" /></>
+    ) : (
+      <>Send via Gmail <ExternalLink size={16} /></>
+    )}
+  </button>
+</div>
               {/* INTERNAL LOG OPTION */}
               <button 
                 type="submit" 
