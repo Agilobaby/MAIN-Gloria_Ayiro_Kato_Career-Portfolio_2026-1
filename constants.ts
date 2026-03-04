@@ -3,7 +3,7 @@ export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/ap
 export const CONTACT_EMAIL = "ayirogloria@gmail.com";
 
 // Using lh3.googleusercontent.com/d/ is often more reliable for direct embedding than drive.google.com/uc
-export const PROFILE_IMAGE = "https://lh3.googleusercontent.com/d/1AxYqPJiacwBMosFsLLSmO19ehoPpRE1h";
+export const PROFILE_IMAGE = "/profile.jpg";
 
 /**
  * CV_URL points to the Google Docs PDF Export link.
