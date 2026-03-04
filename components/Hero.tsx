@@ -131,7 +131,7 @@ I am open to remote and hybrid possibilities in a variety of industries where I 
                <div className="absolute -inset-4 bg-primary/20 rounded-lg blur-2xl group-hover:bg-primary/30 transition-all duration-500"></div>
                <img 
                  src={PROFILE_IMAGE} 
-                 alt={name} 
+                 alt={"Gloria Kato — Education Technology Professional and Digital Support"} 
                  referrerPolicy="no-referrer"
                  className="w-[280px] md:w-[350px] h-[350px] md:h-[450px] object-cover object-center rounded-sm shadow-2xl relative z-10 border-8 border-white dark:border-dark-card transition-all duration-700"
                />

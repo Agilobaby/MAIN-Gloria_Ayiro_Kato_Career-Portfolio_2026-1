@@ -79,7 +79,10 @@ const Portfolio: React.FC<PortfolioProps> = ({ isEditable }) => {
                   <img 
                     src={project.image} 
                     alt={project.title}
-                    onError={handleImageError} 
+                    onError={handleImageError}
+                    width={400}
+                    height={300}
+                    loading="lazy"
                     className="w-full h-full object-cover transition-all duration-700 opacity-80 group-hover:scale-110 group-hover:opacity-60"
                   />
                 ) : (

@@ -137,6 +137,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isEditable, data, onUpdate }) => {
             src={PROFILE_IMAGE} 
             alt={name} 
             referrerPolicy="no-referrer"
+            width={150}
+            height={150}
             className="w-full h-full rounded-full object-cover object-center shadow-xl border-4 border-white dark:border-gray-800 group-hover/img:scale-105 transition-transform duration-300"
           />
           <span className="absolute bottom-4 right-4 w-5 h-5 bg-[#7EB942] rounded-full border-4 border-white dark:border-dark-card shadow-lg animate-pulse"></span>
