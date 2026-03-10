@@ -289,11 +289,15 @@ const saveToStorage = <T>(key: string, data: T) => {
 };
 
 const getHeavyData = async <T>(key: string, defaultVal: T): Promise<T> => {
-  // 1. Try MongoDB via public API (works on all devices, no login needed)
+  // 1. Try MongoDB via public API (no login needed — works for ALL visitors)
   try {
-    const res = await api.get(`/cms/public/${key}`);
-    if (res.data !== undefined && res.data !== null) {
-      return res.data as T;
+    const baseURL = (API_URL || 'http://localhost:5000/api').replace('/api', '');
+    const res = await fetch(`${baseURL}/api/cms/public/${key}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data !== undefined && data !== null) {
+        return data as T;
+      }
     }
   } catch (e) {
     console.warn('MongoDB CMS fetch failed, falling back to IndexedDB:', e);
