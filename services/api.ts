@@ -289,25 +289,33 @@ const saveToStorage = <T>(key: string, data: T) => {
 };
 
 const getHeavyData = async <T>(key: string, defaultVal: T): Promise<T> => {
-  // 1. Try IndexedDB
+  // 1. Try MongoDB via public API (works on all devices, no login needed)
+  try {
+    const res = await api.get(`/cms/public/${key}`);
+    if (res.data !== undefined && res.data !== null) {
+      return res.data as T;
+    }
+  } catch (e) {
+    console.warn('MongoDB CMS fetch failed, falling back to IndexedDB:', e);
+  }
+
+  // 2. Try IndexedDB (local fallback)
   const dbVal = await idbGet<T>(key);
   if (dbVal) return dbVal;
 
-  // 2. Try LocalStorage (Migration path)
+  // 3. Try LocalStorage (migration path)
   const lsVal = localStorage.getItem(key);
   if (lsVal) {
     try {
       const parsed = JSON.parse(lsVal);
-      await idbSet(key, parsed); // Migrate to IDB
-      // Optional: localStorage.removeItem(key); 
+      await idbSet(key, parsed);
       return parsed;
     } catch {
       // invalid data in LS
     }
   }
 
-  // 3. Fallback to default
-  // Important: We save the default to IDB so future reads find it.
+  // 4. Fallback to default
   try {
     await idbSet(key, defaultVal);
   } catch (e) {
@@ -317,15 +325,24 @@ const getHeavyData = async <T>(key: string, defaultVal: T): Promise<T> => {
 };
 
 const saveHeavyData = async <T>(key: string, data: T) => {
+  // 1. Save to MongoDB (syncs across all devices)
+  try {
+    const token = localStorage.getItem('token');
+    if (token) {
+      await api.post('/cms/content', { key, data });
+    }
+  } catch (e) {
+    console.warn('MongoDB CMS save failed, saving locally only:', e);
+  }
+
+  // 2. Also save to IndexedDB (local backup)
   try {
     await idbSet(key, data);
-    // Notify other tabs/components via localStorage event signal
     const timestamp = Date.now().toString();
     localStorage.setItem(key + '_version', timestamp);
     window.dispatchEvent(new StorageEvent('storage', { key: key }));
   } catch (e) {
     console.error("Failed to save to IndexedDB", e);
-    // Fallback to LocalStorage if IDB fails (last resort)
     try {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (lsErr) {

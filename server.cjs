@@ -350,6 +350,77 @@ const seedData = async () => {
   }
 };
 
+// --- CMS Content Schema ---
+const cmsContentSchema = new mongoose.Schema({
+  key: { type: String, required: true, unique: true },
+  data: { type: mongoose.Schema.Types.Mixed, required: true },
+  updatedAt: { type: Date, default: Date.now }
+});
+const CmsContent = mongoose.model('CmsContent', cmsContentSchema);
+
+// --- CMS Routes ---
+
+// PUBLIC route — serves CMS content to all visitors without login
+app.get('/api/cms/public/:key', async (req, res) => {
+  try {
+    const item = await CmsContent.findOne({ key: req.params.key });
+    if (!item) return res.status(404).json(null);
+    res.json(item.data);
+  } catch (err) {
+    res.status(500).json(null);
+  }
+});
+// GET all CMS content
+app.get('/api/cms/content', authMiddleware, async (req, res) => {
+  try {
+    const items = await CmsContent.find({});
+    const result = {};
+    items.forEach(item => { result[item.key] = item.data; });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load CMS content' });
+  }
+});
+
+// POST save CMS content
+app.post('/api/cms/content', authMiddleware, async (req, res) => {
+  try {
+    const { key, data } = req.body;
+    await CmsContent.findOneAndUpdate(
+      { key },
+      { key, data, updatedAt: new Date() },
+      { upsert: true, new: true }
+    );
+    res.json({ message: 'Content saved successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to save CMS content' });
+  }
+});
+
+// GET CMS projects
+app.get('/api/cms/projects', authMiddleware, async (req, res) => {
+  try {
+    const item = await CmsContent.findOne({ key: 'projects' });
+    res.json(item ? item.data : []);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load projects' });
+  }
+});
+
+// POST save CMS projects
+app.post('/api/cms/projects', authMiddleware, async (req, res) => {
+  try {
+    const { data } = req.body;
+    await CmsContent.findOneAndUpdate(
+      { key: 'projects' },
+      { key: 'projects', data, updatedAt: new Date() },
+      { upsert: true, new: true }
+    );
+    res.json({ message: 'Projects saved successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to save projects' });
+  }
+});
 // --- Server Start ---
 mongoose.connect(MONGO_URI)
   .then(async () => {
