@@ -529,13 +529,10 @@ export const login = async (email: string, password: string) => {
     logSecurityEvent('LOGIN_SUCCESS', 'SUCCESS');
     return res.data;
   } catch (error) {
-    if (email === validEmail && password === validPass) {
-       logSecurityEvent('LOGIN_SUCCESS', 'SUCCESS');
-       return { token: 'mock-token-123', user: { _id: 'mock-admin', email: validEmail, role: 'admin' as const } };
-    }
     logSecurityEvent('LOGIN_FAIL', 'WARNING');
     throw error;
   }
+
 };
 
 export const updateAdminCredentials = async (email: string, password: string) => {
