@@ -65,13 +65,11 @@ const contactLimiter = rateLimit({
 app.use(express.json({ limit: '10kb' }));
 app.use(cors({
   origin: function(origin, callback) {
-    const allowedOrigins = [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'https://main-gloria-ayiro-kato-career-portf.vercel.app',
-      process.env.FRONTEND_URL
-    ].filter(Boolean);
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow all Vercel deployments and localhost
+    if (!origin || 
+        origin.includes('vercel.app') || 
+        origin.includes('localhost') ||
+        origin === process.env.FRONTEND_URL) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
