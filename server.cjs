@@ -39,7 +39,7 @@ app.use((req, res, next) => {
 // Global Rate Limiter - 100 requests per 15 minutes per IP
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests from this IP. Please try again after 15 minutes.' }
@@ -62,7 +62,7 @@ const contactLimiter = rateLimit({
   message: { error: 'You have sent too many messages. Please wait an hour before trying again.' }
 });
 
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(cors({
   origin: function(origin, callback) {
     // Allow all Vercel deployments and localhost
