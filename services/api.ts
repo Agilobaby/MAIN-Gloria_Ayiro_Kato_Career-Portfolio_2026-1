@@ -536,6 +536,13 @@ export const login = async (email: string, password: string) => {
 };
 
 export const updateAdminCredentials = async (email: string, password: string) => {
+  // Save to MongoDB (real login)
+  try {
+    await api.post('/auth/change-password', { newPassword: password });
+  } catch (e) {
+    console.warn('Failed to update password in MongoDB:', e);
+  }
+  // Also save locally as backup
   localStorage.setItem(STORAGE_KEYS.ADMIN_CREDS, JSON.stringify({ email, password }));
   localStorage.setItem(STORAGE_KEYS.ADMIN_PASS, password);
   logSecurityEvent('PASSWORD_CHANGE', 'CRITICAL');
