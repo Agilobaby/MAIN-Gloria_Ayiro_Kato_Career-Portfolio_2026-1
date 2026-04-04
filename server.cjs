@@ -328,38 +328,6 @@ app.post('/api/auth/change-password', authMiddleware, async (req, res) => {
   }
 });
 
-// 5. Change Password Route
-app.post('/api/auth/change-password', authMiddleware, async (req, res) => {
-  try {
-    const { newPassword } = req.body;
-    if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters' });
-    }
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(newPassword, salt);
-    await User.findByIdAndUpdate(req.user.id, { passwordHash });
-    res.json({ message: 'Password updated successfully' });
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to update password' });
-  }
-});
-
-// 5. Change Password Route
-app.post('/api/auth/change-password', authMiddleware, async (req, res) => {
-  try {
-    const { newPassword } = req.body;
-    if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters' });
-    }
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(newPassword, salt);
-    await User.findByIdAndUpdate(req.user.id, { passwordHash });
-    res.json({ message: 'Password updated successfully' });
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to update password' });
-  }
-});
-
 // --- Initialization & Seeding ---
 const seedData = async () => {
   // Seed Admin
